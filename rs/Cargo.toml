@@ -6,5 +6,3 @@ edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
-
-[dependencies]
