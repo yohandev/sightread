@@ -1,0 +1,15 @@
+{
+  "name": "sightread",
+  "version": "1.0.0",
+  "description": "a sight reader trainer",
+  "main": "index.js",
+  "repository": "https://github.com/yohandev/sightread.git",
+  "author": "mythcore, humanoid, yohandev",
+  "license": "MIT",
+  "scripts": {
+    "start": "parcel index.html"
+  },
+  "devDependencies": {
+    "parcel": "^2.0.0-beta.2"
+  }
+}
