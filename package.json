@@ -1,0 +1,11 @@
+{
+  "name": "sightread",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/yohandev/sightread.git",
+  "author": "mythcore, humanoid, yohandev",
+  "license": "MIT",
+  "scripts": {
+    "start": "parcel index.html"
+  }
+}
