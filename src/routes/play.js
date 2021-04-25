@@ -61,15 +61,14 @@ microphone.listen(buf.len, x =>
     let done = true;
     play.state.notes.forEach(note =>
     {
-        if (note.played)
+        if (!note.played)
         {
-            console.log(`played ${note.note}`);
-            return;
-        }
+    
         done = false;
         const freq = notes[note.note];
 
         note.played = crate.freqAmount(buf, freq, 10) * 100 > 2;
+        }
     })
 
     if (done)
@@ -82,7 +81,7 @@ microphone.listen(buf.len, x =>
         {
             play.state.notes.push({note: keys[Math.round(keys.length * Math.random())], played: false})
         }
-
+        console.log(play.state.notes)
         //play.state.notes.forEach(note => note.played = false);
 
         m.redraw();
