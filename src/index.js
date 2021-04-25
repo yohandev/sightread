@@ -1,6 +1,7 @@
 import microphone from './mic';
 import crate from './crate';
 import draw from './draw';
+import chords from './chords';
 
 const buf = crate.alloc['f32[]'](2048);
 

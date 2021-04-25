@@ -9,6 +9,10 @@
     "start": "parcel index.html"
   },
   "dependencies": {
-    "@svgdotjs/svg.js": "^3.0.16"
+    "@svgdotjs/svg.js": "^3.0.16",
+    "@tonejs/midi": "^2.0.27"
+  },
+  "devDependencies": {
+    "typescript": "^4.2.4"
   }
 }
