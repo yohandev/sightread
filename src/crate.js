@@ -19,73 +19,45 @@ const crate =
         {
             const ptr = module.alloc_arr_i32(len);
 
-            return new Int32Array(module.memory.buffer, ptr, len);
+            return new crate.alloc.arr(ptr, len);
         },
         /**
          *  allocate an f32[] of length `len`
          * 
          * @param {Number} len length of array allocated
-         * @returns {f32Arr} allocated array reference
          */
         "f32[]": (len) =>
         {
             const ptr = module.alloc_arr_f32(len);
  
-            return new f32Arr(ptr, len);
-        }
-    },
-    fft:
-    {
-        /**
-         * applies the fourier transform to the given buffer of audio samples,
-         * and returns the maximum value by norm
-         * 
-         * @param {f32Arr} buf f32[] in wasm memory
-         * @returns {Number} frequency with the greatest amplitude
-         */
-        fftMax: (buf) =>
-        {
-            return module.fft_max(buf.ptr, buf.len);
+            return new crate.alloc.arr(ptr, len);
         },
         /**
-         * applies the fourier transform to the given buffer of audio samples,
-         * writing frequencies in-place and amplitudes at `amp` buffer
-         * @param {f32Arr} buf 
-         * @param {f32Arr} amp 
+         * wrapper around a reference to an array in wasm memory
          */
-        freq: (buf, amp) =>
+        arr: class WasmArray
         {
-            console.assert(buf.len == amp.len);
+            /**
+             * construct a new array reference
+             * @param {Number} ptr pointer in bytes to start
+             * @param {Number} len length, in elements, of slice
+             */
+            constructor(ptr, len)
+            {
+                this.ptr = ptr;
+                this.len = len;
+            }
 
-            module.fft(buf.ptr, amp.ptr, buf.len);
-        },
-        fft: (re, im) =>
-        {
-            module.in_place(re.ptr, im.ptr, re.len);
+            /**
+             * get the underlying buffer, interpreted as i32[]
+             */
+            get i32() { return new Int32Array(module.memory.buffer, this.ptr, this.len); }
+
+            /**
+             * get the underlying buffer, interpreted as f32[]
+             */
+            get f32() { return new Float32Array(module.memory.buffer, this.ptr, this.len); }
         }
     },
 }
-
-class f32Arr
-{
-    /**
-     * construct a new array reference
-     * @param {Number} ptr pointer in bytes to start
-     * @param {Number} len length, in elements, of slice
-     */
-    constructor(ptr, len)
-    {
-        this.ptr = ptr;
-        this.len = len;
-    }
-
-    /**
-     * get the underlying buffer, guaranteed to be valid
-     */
-    get buf()
-    {
-        return new Float32Array(module.memory.buffer, this.ptr, this.len);
-    }
-}
-
 export default crate;

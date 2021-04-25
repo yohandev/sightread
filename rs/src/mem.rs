@@ -21,6 +21,7 @@ pub fn alloc_arr_f32(len: i32) -> i32
 }
 
 /// reconstruct a slice from its offset and length in wasm memory
+#[allow(dead_code)]
 pub unsafe fn reconstruct_slice<'a, T>(ptr: i32, len: i32) -> &'a [T]
 {
     use std::ptr::slice_from_raw_parts;
@@ -29,6 +30,7 @@ pub unsafe fn reconstruct_slice<'a, T>(ptr: i32, len: i32) -> &'a [T]
 }
 
 /// reconstruct a slice from its offset and length in wasm memory
+#[allow(dead_code)]
 pub unsafe fn reconstruct_slice_mut<'a, T>(ptr: i32, len: i32) -> &'a mut [T]
 {
     use std::ptr::slice_from_raw_parts_mut;

@@ -6,6 +6,3 @@ edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
-
-[dependencies]
-rustfft = "6.0.0"
