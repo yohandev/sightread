@@ -11,7 +11,7 @@ microphone.listen(buf.len, x =>
     buf.f32.set(x);
 
     // find requency
-    const freq = 261; // C3
+    const freq = 440; // A4
 
     let { score, phase } = crate.freqAmount(buf, freq, 10);
     
