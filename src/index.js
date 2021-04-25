@@ -1,32 +1,52 @@
-import crate from './crate';
-import visualizeFft from './graph';
+import { SVG } from '@svgdotjs/svg.js';
+
 import microphone from './mic';
+import crate from './crate';
 
-// /**
-//  * PCM buffer in wasm memory
-//  */
-// const pcm = crate.alloc['f32[]'](1024);
-// /**
-//  * amplitudes buffer in wasm memory
-//  */
-// const amp = crate.alloc['f32[]'](pcm.len);
+const buf = crate.alloc['f32[]'](2048);
 
-// microphone(pcm.len, (smp, hz) =>
-// {
-//     pcm.buf.set(smp);
+const svg = SVG()
+    .addTo('body')
+    .width(window.innerWidth)
+    .height(window.innerHeight);
+const ln1 = svg
+    .polyline()
+    .fill('none')
+    .stroke({ width: 3, color: 'black' });
+const ln2 = svg
+    .polyline()
+    .fill('none')
+    .stroke({ width: 3, color: 'red' });
 
-//     crate.fft.freq(pcm, amp)// * (hz / buf.length);
-
-//     graph(pcm.buf, amp.buf);
-// })
-
-const re = crate.alloc['f32[]'](2048);
-const im = crate.alloc['f32[]'](2048);
-
-microphone(re.len, (win, hz) =>
+const wave = (i, freq, phase) =>
 {
-    re.buf.set(win);
-    crate.fft.fft(re, im);
+    //((PI_TIMES_2 * self.freq * (self.i - self.phase)) / self.fs).sin()
+    return Math.sin((2 * Math.PI * freq * (i - phase)) / microphone.sampleRate());
+}
 
-    visualizeFft(re.buf, im.buf);
+microphone.listen(buf.len, x =>
+{
+    // upload to wasm
+    buf.f32.set(x);
+
+    let { score, phase } = crate.freqAmount(buf, 261, 10);
+    
+    console.log(`440hz: ${score * 100}`);
+
+    let pts1 = [];
+    let pts2 = [];
+    for (let i = 0; i < x.length; i++)
+    {
+        // x
+        pts1.push(i / x.length * window.innerWidth);
+        // y
+        pts1.push(x[i] * window.innerHeight * 5);
+
+        // x
+        pts2.push(i / x.length * window.innerWidth);
+        // y
+        pts2.push(wave(i, 261, phase) * window.innerHeight * 0.2);
+    }
+    ln1.plot(pts1);
+    ln2.plot(pts2);
 })
