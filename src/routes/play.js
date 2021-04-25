@@ -2,14 +2,21 @@ import m from 'mithril'
 
 import microphone from '../mic';
 import crate from '../crate';
+import draw from '../draw';
 
 const play =
 {
     view: () =>
     (
         <div class='page'>
-            play an A:
-            { play.state['A4'] ? (<h1>You played an A4! Not so stupid after all</h1>) : null }
+            {/* play an A: */}
+            {/* { play.state['A4'] ? (<h1>You played an A4! Not so stupid after all</h1>) : null } */}
+            <svg id='notes-container'>'
+                { draw.treble }
+                <g class='notes-down' style={`transform: translate(1.25em, ${3}%)`}>
+                    { draw.note_down }
+                </g>
+            </svg>
         </div>
     ),
     state:
@@ -17,6 +24,7 @@ const play =
         'A4': false,
     }
 }
+
 // PCM buffer in wasm memory
 const buf = crate.alloc['f32[]'](2048);
 

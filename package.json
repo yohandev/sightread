@@ -12,7 +12,9 @@
     "@svgdotjs/svg.js": "^3.0.16",
     "@tonejs/midi": "^2.0.27",
     "d": "^1.0.1",
-    "mithril": "^2.0.4"
+    "mithril": "^2.0.4",
+    "parcel-plugin-inlinesvg": "^0.1.1",
+    "react": "^17.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-0",
@@ -20,6 +22,7 @@
     "@babel/preset-env": "^7.13.15",
     "babel-core": "^6.26.3",
     "babel-plugin-transform-react-jsx": "^6.24.1",
-    "babel-preset-env": "^1.7.0"
+    "babel-preset-env": "^1.7.0",
+    "parcel-bundler": "^1.12.5"
   }
 }

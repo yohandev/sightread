@@ -28,3 +28,32 @@ html, body
 
     font-size: 5em;
 }
+
+#notes-container
+{
+    margin: 0;
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-35%, -50%);
+
+    font-size: 5em;   
+}
+
+.notes-down
+{
+    /* transform: translate(1.25em, 3%); */
+    /**
+    G: 3%
+    F: 11%
+    E: 18%
+    D: 25%
+    C: 32%
+    B: 39%
+    A: 46%
+    */
+    position: absolute;
+    
+}
