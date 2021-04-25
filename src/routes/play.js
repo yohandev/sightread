@@ -7,7 +7,7 @@ const play =
 {
     view: () =>
     (
-        <div>
+        <div class='page'>
             play an A:
             { play.state['A4'] ? (<h1>You played an A4! Not so stupid after all</h1>) : null }
         </div>

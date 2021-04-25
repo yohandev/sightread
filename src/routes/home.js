@@ -4,7 +4,10 @@ const home =
 {
     view: () =>
     (
-        <div>
+        <div class='page'>
+            <div id='logo'>
+                sight<strong>read</strong>
+            </div>
             <a href='#!/play'>
                 <button>play</button>
             </a>
