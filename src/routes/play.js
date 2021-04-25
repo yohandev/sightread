@@ -80,7 +80,7 @@ microphone.listen(buf.len, x =>
         play.state.notes = [];
         for (let i = 0; i < Math.random() * 5; i++)
         {
-            play.state.notes.push({note: keys[keys.length * Math.random()], played: false})
+            play.state.notes.push({note: keys[Math.round(keys.length * Math.random())], played: false})
         }
 
         //play.state.notes.forEach(note => note.played = false);
