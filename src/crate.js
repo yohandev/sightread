@@ -1,4 +1,5 @@
 import * as module from '../rs/src/lib.rs'
+import microphone from './mic';
 
 /**
  * rust crate's exports
@@ -59,5 +60,20 @@ const crate =
             get f32() { return new Float32Array(module.memory.buffer, this.ptr, this.len); }
         }
     },
+    /**
+     * calculate a relative score for a given frequency in an audio buffer
+     * 
+     * @param {WasmArray} buf audio samples buffer
+     * @param {Number} freq frequency to test for
+     * @param {Number} iter number of test iterations
+     */
+    freqAmount: (buf, freq, iter) =>
+    {
+        return {
+            score: module.freq_amt(buf.ptr, buf.len, freq, iter, microphone.sampleRate()),
+            // very lazy: encode phase shift in index 0 of input buffer
+            phase: buf.f32[0]
+        }
+    }
 }
 export default crate;
