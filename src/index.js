@@ -1,22 +1,12 @@
-import microphone from './mic';
-import crate from './crate';
-import draw from './draw';
-import chords from './chords';
+import m from 'mithril'
 
-const buf = crate.alloc['f32[]'](2048);
+import home from './routes/home'
+import play from './routes/play'
 
+const root = document.body
 
-microphone.listen(buf.len, x =>
+m.route(root, '/home',
 {
-    // upload to wasm
-    buf.f32.set(x);
-
-    // find requency
-    const freq = 440; // A4
-
-    let { score, phase } = crate.freqAmount(buf, freq, 10);
-    
-    console.log(`${freq}hz: ${score * 100}`);
-
-    draw(x, freq, phase);
+    '/home': home,
+    '/play': play,
 })

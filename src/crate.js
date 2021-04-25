@@ -69,11 +69,7 @@ const crate =
      */
     freqAmount: (buf, freq, iter) =>
     {
-        return {
-            score: module.freq_amt(buf.ptr, buf.len, freq, iter, microphone.sampleRate()),
-            // very lazy: encode phase shift in index 0 of input buffer
-            phase: buf.f32[0]
-        }
+        return module.freq_amt(buf.ptr, buf.len, freq, iter, microphone.sampleRate());
     }
 }
 export default crate;
