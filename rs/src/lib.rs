@@ -17,7 +17,7 @@ pub fn freq_amt(ptr: i32, len: i32, freq: f32, n: i32, fs: i32) -> f32
     //    score <- riemann sum of their products
     //  stop if score is less than previous score
     // return score
-    let mut wave = Wave { freq, fs, ..Default::default() };
+    let mut wave = PianoWave { freq, fs, ..Default::default() };
 
     // TODO optmization:
     //  check 3 tries window for a local minima or maxima,
@@ -77,6 +77,21 @@ struct Wave
     fs: f32,
 }
 
+/// infinite iterator for piano wave of amplitude 1
+#[derive(Debug, Default, Clone, Copy)]
+struct PianoWave
+{
+    /// phase shift of the wave, in wavelength units
+    phase: f32,
+    /// fundamental frequency of the wave, in hertz
+    freq: f32,
+
+    /// current sample
+    i: f32,
+    /// sample rate, ie. 44_100hz
+    fs: f32,
+}
+
 impl Iterator for Wave
 {
     type Item = f32;
@@ -87,5 +102,38 @@ impl Iterator for Wave
 
         self.i += 1.0;
         Some(((PI_TIMES_2 * self.freq * (self.i - self.phase)) / self.fs).sin())
+    }
+}
+
+impl Iterator for PianoWave
+{
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        /// overtones relative amplitude, estimated from this:
+        /// http://www.silcom.com/~aludwig/images/pianonote.gif
+        ///
+        /// includes the fundamental frequnecy as 1.0
+        const OVERTONES: &[f32] = &[1.0, 0.389045, 0.063095, 0.1, 0.050699, 0.017782, 0.0204173];
+        /// 3.1415...
+        const PI: f32 = std::f32::consts::PI;
+
+        // simple sine wave function
+        let wave = |freq: f32|
+        {
+            ((2.0 * PI * freq * (self.i - self.phase)) / self.fs).sin()
+        };
+        // calculate note with overtones
+        let note = OVERTONES
+            .iter()
+            .enumerate()
+            .map(|(i, amp)| *amp * wave(self.freq * 2.0f32.powi(i as i32)))
+            .sum();
+        
+        // increment for next sample
+        self.i += 1.0;
+
+        Some(note)
     }
 }
