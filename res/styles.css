@@ -42,6 +42,23 @@ html, body
     font-size: 5em;   
 }
 
+#composer
+{
+    width: 100%;
+
+    margin: 0;
+    position: absolute;
+
+    top: 20%;
+    /* left: 50%; */
+
+    transform: translate(0%, -50%); 
+    padding: 0;
+      
+
+    text-align: center;
+}
+
 .notes-down
 {
     /* transform: translate(1.25em, 3%); */

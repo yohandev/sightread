@@ -154,3 +154,4 @@ const notes =
     'Bb8':  7458.62,
     'B8':   7902.13
 }
+export default notes;
