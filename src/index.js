@@ -20,8 +20,14 @@ const ln2 = svg
 
 const wave = (i, freq, phase) =>
 {
-    //((PI_TIMES_2 * self.freq * (self.i - self.phase)) / self.fs).sin()
-    return Math.sin((2 * Math.PI * freq * (i - phase)) / microphone.sampleRate());
+    const OVERTONES = [1.0, 0.389045, 0.063095, 0.1, 0.050699, 0.017782, 0.0204173];
+    const sine = fq =>
+    {
+        return Math.sin((2 * Math.PI * fq * (i - phase)) / microphone.sampleRate());
+    }
+    return OVERTONES
+        .map((amp, i) => amp * sine(freq * Math.pow(2, i)))
+        .reduce((a, b) => a + b, 0);
 }
 
 microphone.listen(buf.len, x =>
