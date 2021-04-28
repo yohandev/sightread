@@ -1,0 +1,18 @@
+{
+  "name": "sightread",
+  "version": "1.0.0",
+  "description": "a music trainer app",
+  "main": "index.js",
+  "repository": "https://github.com/yohandev/sightread.git",
+  "author": "yohandev",
+  "license": "MIT",
+  "scripts": {
+    "dev": "node run/dev.js"
+  },
+  "devDependencies": {
+    "@types/live-server": "^1.2.0",
+    "chokidar": "^3.5.1",
+    "esbuild": "^0.11.15",
+    "live-server": "^1.2.1"
+  }
+}

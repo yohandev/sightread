@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["wasm-stub:/Users/yohan/dev/sightread/src/rs/mod.wasm", "../src/rs/mod.js", "../src/js/main.js"],
+  "sourcesContent": ["\n            import wasm from \"/Users/yohan/dev/sightread/src/rs/mod.wasm\"\n\n            export default (imports) => WebAssembly\n                .instantiate(wasm, imports)\n                .then(result => result.instance.exports)\n            ", "import load from './mod.wasm'\n\n/** @type {WebAssembly.Exports} */\nlet exports = undefined;\n\n/** bindings over WASM module */\nexport default\n{\n    /** begins loading the WASM module */\n    async load()\n    {\n        exports = await load();\n    },\n\n    /** @returns {WebAssembly.Memory} */\n    get memory() { return exports.memory },\n\n    /**\n     * add two numbers together\n     * @param {number} a \n     * @param {number} b \n     * @returns {number}\n     */\n    add(a, b)\n    {\n        return exports.add(a, b)\n    }\n}", "import wasm from '../rs/mod'\n\nconst main = async () =>\n{\n    await wasm.load()\n\n    console.log(`4 + 2 = ${wasm.add(4, 2)}`)\n}\n\nmain();"],
+  "mappings": "ir8gEAGY,GAAO,GAAQ,AAAC,GAAY,YACvB,YAAY,EAAM,GAClB,KAAK,GAAU,EAAO,SAAS,SCFhD,GAAI,GAGG,EACP,MAEU,OACN,CACI,EAAU,KAAM,SAIhB,SAAS,CAAE,MAAO,GAAQ,QAQ9B,IAAI,EAAG,EACP,CACI,MAAO,GAAQ,IAAI,EAAG,KCvB9B,GAAM,GAAO,SACb,CACI,KAAM,GAAK,OAEX,QAAQ,IAAI,WAAW,EAAK,IAAI,EAAG,OAGvC",
+  "names": []
+}
