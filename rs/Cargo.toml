@@ -1,8 +1,0 @@
-[package]
-name = "sightread-fft"
-version = "0.1.0"
-authors = ["yohandev"]
-edition = "2018"
-
-[lib]
-crate-type = ["cdylib"]
