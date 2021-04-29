@@ -1,7 +1,6 @@
 ;(async () =>
 {
     const { spawn } = require('child_process')
-    const { copyFile } = require('fs');
 
     const port = +process.env.PORT || 1234;
     const cwd = require('process').cwd();
@@ -32,19 +31,21 @@
             '--manifest-path=src/rs/Cargo.toml',
             '--target-dir=.cache/rs-target'
         ],
+        gc: [
+            ".cache/rs-target/wasm32-unknown-unknown/release/sightread.wasm",
+            "src/rs/mod.wasm"
+        ],
         rebuild()
         {
-            return Promise.resolve(
-                spawn('cargo', this.opt, { cwd: cwd, stdio: 'inherit' })
+            return Promise.resolve(spawn('cargo', this.opt, { cwd: cwd, stdio: 'inherit' })
                 .on('message', console.log)
                 .on('error', console.error)
                 .on('exit', _ =>
-                {
-                    const artifact = '.cache/rs-target/wasm32-unknown-unknown/release/sightread.wasm';
-                    
-                    // copy output wasm and recompile
-                    copyFile(artifact, 'src/rs/mod.wasm', e => e ? console.error(e) : undefined);
-                    esbuild.rebuild()
+                {                    
+                    // strip output wasm and recompile
+                    spawn('wasm-gc', this.gc, { cmd: cwd, stdio: 'inherit' })
+                        .on('error', console.error)
+                        .on('exit', _ => esbuild.rebuild());
                 })
             )
         }

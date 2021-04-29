@@ -1,0 +1,8 @@
+[build]
+target-dir = "../../.cache/rs-target"
+
+[profile.wasm32-unknown-unknown]
+incremental = true
+opt-level = 's'
+panic = 'abort'
+lto = true

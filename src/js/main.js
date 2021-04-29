@@ -4,7 +4,9 @@ const main = async () =>
 {
     await wasm.load()
 
-    console.log(`4 + 2 = ${wasm.add(4, 2)}`)
+    let arr = wasm.alloc('f32[]', 30);
+
+    wasm.dealloc(arr);
 }
 
 main();
