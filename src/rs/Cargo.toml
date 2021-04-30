@@ -6,9 +6,8 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-# spectrum-analyzer = "0.5.2"
 wee_alloc = "0.4.5"
-# rustfft = "6.0.0"
+microfft = "0.4.0"
 
 [lib]
 crate-type = ["cdylib"]
