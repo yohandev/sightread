@@ -54,7 +54,7 @@ pub fn frequencies(ptr: u32, len: u32, fs: u32)
     {
         // equivalent to:
         // c.im = c.norm_sqr() # aliasing
-        *amp = c.norm_sqr() / len as f32;
+        *amp = 2.0 * c.norm_sqr().sqrt() / len as f32;
         // at this point, neither c or fq_amp is usable
         *fq = f_res * i as f32;
     }

@@ -19,7 +19,7 @@ const main = async () =>
 {
     await wasm.load()
 
-    let arr = wasm.alloc(1024);
+    let arr = wasm.alloc(4096);
 
     // piano A note wave
     for (let i = 0; i < arr.len; i++)
@@ -30,13 +30,30 @@ const main = async () =>
     // FFT
     let fqAmp = wasm.frequencies(arr, 44_100);
 
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const lin = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+
+    lin.style.stroke = '#000';
+    lin.style.strokeWidth = '5px';
+
+    svg.appendChild(lin);
+    document.body.appendChild(svg);
+    
+    let pts = "";
     for (let i = 0; i < arr.len; i += 2)
     {
-        if (fqAmp.f32[i + 1] > 1)
-        {
-            console.log(`${fqAmp.f32[i]}hz -> ${fqAmp.f32[i + 1]}`);
-        }
+        const frq = fqAmp.f32[i] * (w / arr.len);
+        const amp = h - 30 - fqAmp.f32[i + 1] * (h * 0.9);
+
+        pts += `${frq}, ${amp} `
     }
+    lin.setAttribute('points', pts);
 
     wasm.dealloc(arr);
 }
