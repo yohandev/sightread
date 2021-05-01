@@ -68,5 +68,17 @@ export default
         exports.frequencies(pcm.ptr, pcm.len, fs);
 
         return pcm;
+    },
+    /**
+     * performs the hamming windowing function to the buffer of PCM
+     * data
+     * @param {WasmArray} pcm audio signal data
+     * @returns {WasmArray} pcm passed in
+     */
+    hamming(pcm)
+    {
+        exports.hamming(pcm.ptr, pcm.len);
+
+        return pcm;
     }
 }

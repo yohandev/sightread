@@ -59,3 +59,28 @@ pub fn frequencies(ptr: u32, len: u32, fs: u32)
         *fq = f_res * i as f32;
     }
 }
+
+/// performs the hamming windowing effect on a sample
+/// buffer starting at `ptr` with `len` elements, being
+/// an `f32[]`
+#[no_mangle]
+pub fn hamming(ptr: u32, len: u32)
+{
+    use std::slice::from_raw_parts_mut as raw_slice;
+    // 25/46 constant
+    const A: f32 = 25.0 / 46.0;
+    // 1 - A constant
+    const B: f32 = 1.0 - A;
+    // 2π / N constant
+    let w = 2.0 * std::f32::consts::PI / (len - 1) as f32;
+
+    // reconstruct array
+    let buf = unsafe { raw_slice(ptr as *mut f32, len as usize) };
+
+    // perform on every sample
+    for (n, sample) in buf.iter_mut().enumerate()
+    {
+        // w(n) = 0.54 − 0.46cos(2π(n/N)) 0 ≤ n ≤ N
+        *sample *= A - B * (w * n as f32).cos();
+    }
+}

@@ -17,6 +17,8 @@ export default async (samples, processor) =>
     /** @type {ScriptProcessorNode} */
     const recorder = (context.createScriptProcessor || context.createJavaScriptNode).call(context, samples, 1, 1);
     
+    // TODO use modern API https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletNode
+
     // run processor on raw audio samples
     recorder.onaudioprocess = e => processor(e.inputBuffer.getChannelData(0), context.sampleRate);
     // link new recorder
