@@ -7,19 +7,40 @@ const main = async () =>
     await wasm.load();
 
     const pcm = wasm.alloc(1024);
+    const old = new Float32Array(pcm.len / 2);
 
-    await mic(1024, (samples, fs) =>
+    await mic(pcm.len, (samples, fs) =>
     {
-        // copy over data
-        pcm.f32.set(samples);
-        // FFT
-        let fft = wasm.frequencies(wasm.hamming(pcm), fs);
-        
+        // for old = [staging buffer], pcm = [fft buffer]
+        //
+        // 1. copy [staging buffer] to left of [fft buffer]
+        // 2. copy left of [new pcm] to right of [fft buffer]
+        // 3. copy right of [new pcm] to [staging buffer]
+        // 4. apply windowing fn to [fft buffer]
+        // 5. run fft on [fft buffer]
+
+        // left, right
+        const lfft = pcm.f32.subarray(0, pcm.len / 2);
+        const rfft = pcm.f32.subarray(pcm.len / 2);
+        const lnew = samples.subarray(0, samples.length / 2);
+        const rnew = samples.subarray(samples.length / 2);
+
+        // 1.
+        lfft.set(old);
+        // 2.
+        rfft.set(lnew);
+        // 3.
+        old.set(rnew);
+        // 4.
+        wasm.hamming(pcm);
+        // 5.
+        wasm.frequencies(pcm, fs);
+
         // draw
         draw.step();
         for (let i = 0; i < pcm.len; i += 2)
         {
-            draw.put(fft.f32[i + 1] * 10000);
+            draw.put(Math.log10(pcm.f32[i + 1] * 1000) * 500);
         }
     })
     //wasm.dealloc(arr);
