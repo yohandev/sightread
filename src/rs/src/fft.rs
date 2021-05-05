@@ -54,6 +54,7 @@ pub fn frequencies(ptr: u32, len: u32, fs: u32)
     {
         // equivalent to:
         // c.im = c.norm_sqr() # aliasing
+        // TODO power spectogram, squared
         *amp = 2.0 * c.norm_sqr().sqrt() / len as f32;
         // at this point, neither c or fq_amp is usable
         *fq = f_res * i as f32;
@@ -82,5 +83,31 @@ pub fn hamming(ptr: u32, len: u32)
     {
         // w(n) = 0.54 − 0.46cos(2π(n/N)) 0 ≤ n ≤ N
         *sample *= A - B * (w * n as f32).cos();
+    }
+}
+
+/// converts the output amplitudes of `frequencies` to
+/// decibels. removes amplitudes below the threshold min
+#[no_mangle]
+pub fn decibel(ptr: u32, len: u32, min: f32)
+{
+    use std::slice::from_raw_parts_mut as raw_slice;
+
+    // reconstruct array
+    let buf = unsafe { raw_slice(ptr as *mut f32, len as usize) };
+    // max amplitude is decibel ref
+    let max = buf
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .fold(f32::MIN_POSITIVE, |max, &val| if val > max { val } else { max });
+    
+    let log = 20.0 * min.max(max).log10();
+
+    for amp in buf
+    {
+        // TODO power spectogram * 10
+        // equivalent to 20 * log10(amp / max)
+        *amp = 20.0 * min.max(*amp).log10() - log;
     }
 }

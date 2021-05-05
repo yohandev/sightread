@@ -35,12 +35,16 @@ const main = async () =>
         wasm.hamming(pcm);
         // 5.
         wasm.frequencies(pcm, fs);
+        // 6.
+        //wasm.decibel(pcm, 30);
 
         // draw
         draw.step();
         for (let i = 0; i < pcm.len; i += 2)
         {
-            draw.put(Math.log10(pcm.f32[i + 1] * 1000) * 500);
+            const val = Math.log10(pcm.f32[i + 1] * 1000) * 500; // no decibel
+            //const  val = (50 + pcm.f32[i + 1]) * 10; // decibel
+            draw.put(val);
         }
     })
     //wasm.dealloc(arr);

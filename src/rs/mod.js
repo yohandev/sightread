@@ -61,24 +61,27 @@ export default
      * 
      * @param {WasmArray} pcm input samples, of some power of 2 length
      * @param {number} fs sampling frequency
-     * @returns {WasmArray} (frequency, amplitude)[pcm.len / 2]
      */
     frequencies(pcm, fs)
     {
         exports.frequencies(pcm.ptr, pcm.len, fs);
-
-        return pcm;
     },
     /**
      * performs the hamming windowing function to the buffer of PCM
      * data
      * @param {WasmArray} pcm audio signal data
-     * @returns {WasmArray} pcm passed in
      */
     hamming(pcm)
     {
         exports.hamming(pcm.ptr, pcm.len);
-
-        return pcm;
+    },
+    /**
+     * converts output amplitudes of `frequencies(...)` to decibels
+     * @param {WasmArray} pcm output of `frequencies(...)`
+     * @param {number} min clips amplitudes below threshold
+     */
+    decibel(pcm, min = 1e-5)
+    {
+        exports.decibel(pcm.ptr, pcm.len);
     }
 }
