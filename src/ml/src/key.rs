@@ -1,5 +1,18 @@
-use std::{convert::{TryFrom, TryInto}, fmt::{ Debug, Display, Write }};
+use std::fmt::{ Debug, Display, Write };
+use std::convert::{ TryFrom, TryInto };
 use std::str::FromStr;
+
+/// represents the state for an 88-key keyboard, on/off
+/// with velocity
+#[derive(Debug, Clone, PartialEq)]
+pub struct Keyboard
+{
+    /// key velocities, from index 0(A0) to index 87(C8).
+    /// a 0.0 velocity represents an off state.
+    /// 
+    /// last entry is sustain pedal
+    state: [f32; 88 + 1]
+}
 
 /// represents a key on a traditional 88-key keyboard
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,6 +62,14 @@ enum Accent
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Octave(pub u8);
 
+impl Keyboard
+{
+    /// index in `self.state` representing the sustain pedal
+    const SUSTAIN_IND: usize = 88;
+
+
+}
+
 impl Key
 {
     /// create a new key, on an 88-key keyboard, from its components
@@ -94,6 +115,49 @@ impl Key
             },
             _ => false
         }
+    }
+
+    /// get this note's "ordinal" value, where 0 is A0 and 87 is C8
+    /// not to be confused with `midi` frequency value
+    pub fn ordinal(&self) -> usize
+    {
+        /// ordinal for a key's octave
+        fn oct(oct: Octave) -> isize
+        {
+            oct.0 as isize * 12
+        }
+        /// ordinal for a whole tone note
+        fn note(note: Note) -> isize
+        {
+            match note
+            {
+                Note::C => -9,
+                Note::D => -7,
+                Note::E => -5,
+                Note::F => -4,
+                Note::G => -2,
+                Note::A => 0,
+                Note::B => 2,
+            }
+        }
+        /// ordinal for a key's accent
+        fn acc(acc: Accent) -> isize
+        {
+            match acc
+            {
+                Accent::Natural => 0,
+                Accent::Sharp => 1,
+                Accent::Flat => -1,
+            }
+        }
+
+        (oct(self.oct) + note(self.note) + acc(self.acc)) as usize
+    }
+
+    /// get this note as a midi number
+    pub fn midi(&self) -> u8
+    {
+        21 + self.ordinal() as u8
     }
 }
 
