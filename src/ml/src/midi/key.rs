@@ -10,7 +10,8 @@ pub struct Keyboard
     /// key velocities, from index 0(A0) to index 87(C8).
     /// a 0.0 velocity represents an off state.
     /// 
-    /// last entry is sustain pedal
+    /// last entry is sustain pedal(represented like this to
+    /// be passed to a NN directly
     state: [Velocity; 88 + 1]
 }
 
