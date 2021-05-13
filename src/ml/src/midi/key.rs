@@ -1,209 +1,242 @@
-use std::fmt::{ Debug, Display, Write };
-use std::convert::{ TryFrom, TryInto };
-use std::str::FromStr;
-
 /// represents the state for an 88-key keyboard, on/off
 /// with velocity
 #[derive(Debug, Clone, PartialEq)]
 pub struct Keyboard
 {
-    /// key velocities, from index 0(A0) to index 87(C8).
-    /// a 0.0 velocity represents an off state.
-    /// 
-    /// last entry is sustain pedal(represented like this to
-    /// be passed to a NN directly
-    state: [Velocity; 88 + 1]
+    /// keyboard keys, mapping A0♮..C8♮ indices to keys'
+    /// respective "velocities" as passed in by MIDI files,
+    /// a value of `0` indicating that key being released
+    keys: [u8; 88],
+    /// [soft pedal, damber pedal(sustain)] press amounts, as
+    /// represented by MIDI files
+    pedals: [u8; 2],
 }
 
-/// represents a key on a traditional 88-key keyboard
+/// wrapper over a MIDI note code, permitting only those found on an
+/// 88-key keyboard
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Key
-{
-    /// octave of the key, 1-7 + A0-B0, C8
-    oct: Octave,
-    /// A-G
-    note: Note,
-    /// natural, sharp, flat
-    acc: Accent,
-}
+pub struct Note(u8);
 
-/// represents a musical note
+/// an interval spanning the 12 notes on the chromatic scale
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Note
+pub struct Octave(u8);
+
+/// white keys on a keyboard, denoting the C Major scale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tone
 {
     /// Do
-    C,
+    C = 0,
     /// Re
-    D,
+    D = 2,
     /// Mi
-    E,
+    E = 4,
     /// Fa
-    F,
+    F = 5,
     /// So
-    G,
+    G = 7,
     /// La
-    A,
+    A = 9,
     /// Ti
-    B,
+    B = 11,
 }
 
-/// represents a music accidental sign
+/// synonymous to a music accidental, moving a half-step up or
+/// down on the chromatic scale for `♯` and `♭` respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Accent
+pub enum Semitone
 {
-    /// cancels out of a flat or a sharp(♮)
-    Natural,
-    /// play the note a semitone higher(♯)
-    Sharp,
-    /// play the note a semitone lower(♭)
-    Flat,
+    /// `♮`
+    ///
+    /// indicates lack of a semitone, effectively cancelling out
+    /// a sharp or flat acccidental
+    Natural = 0,
+    /// `♯`
+    /// 
+    /// indicates that the note is a semitone higher on the chromatic
+    /// scale
+    Sharp = 1,
+    /// `♭`
+    /// 
+    /// indicates that the note is a semitone lower on the chromatic
+    /// scale
+    Flat = -1,
 }
 
-/// represents a musical octave, 0-8
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Octave(pub u8);
-
-/// MIDI key velocity
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Velocity(pub u8);
+/// represents a normal piano's two pedals(mute omitted)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Pedal
+{
+    /// the soft pedal
+    Soft = 0,
+    /// the damper pedal(sustain)
+    Damper = 1,
+}
 
 impl Keyboard
 {
-    /// index in `self.state` representing the sustain pedal
-    const SUSTAIN_IND: usize = 88;
-
-
+    /// create a new `Keyboard` with zeroed out values
+    pub fn new() -> Self
+    {
+        Self
+        {
+            keys: [0; 88],
+            pedals: [0; 2],
+        }
+    }
 }
 
-impl Key
+impl Note
 {
-    /// create a new key, on an 88-key keyboard, from its components
-    pub fn new(oct: Octave, note: Note, acc: Accent) -> Self
-    {
-        let key = Self { oct, note, acc };
+    /// lowest note on an 88-key keyboard(A0♮), and effectively the
+    /// lowest permitted inner value for `Note`s
+    pub const MIN: Self = Self(21);
+    /// highest note on an 88-key keyboard(C8♮), and effectively the
+    /// highest permitted inner value for `Note`s
+    pub const MAX: Self = Self(108);
 
-        if Self::valid(oct, note, acc)
+    /// construct a `Note` from its MIDI valeu 
+    pub fn new(midi: u8) -> Option<Self>
+    {
+        if midi >= Self::MIN.0
+        || midi <= Self::MAX.0
         {
-            key
+            Some(Self(midi))
         }
         else
         {
-            panic!("{:?} is out of bounds of an 88-key keyboard!", key)
+            None
         }
     }
 
-    /// is the given key on an 88-key keyboard?
-    pub fn valid(oct: Octave, note: Note, acc: Accent) -> bool
+    /// construct a `Note`, but from its musical notation rather than
+    /// MIDI note value
+    pub fn new2(oct: Octave, tone: Tone, semi: Semitone) -> Option<Self>
     {
-        match oct.0
-        {
-            n if (1..=7).contains(&n) =>
-            {
-                true
-            },
-            0 =>
-            {
-                match note
-                {
-                    Note::B => true,
-                    Note::A => !matches!(acc, Accent::Flat),
-                    _ => false,
-                }
-            },
-            8 =>
-            {
-                match note
-                {
-                    Note::C => !matches!(acc, Accent::Sharp),
-                    _ => false,
-                }
-            },
-            _ => false
-        }
+        // make this a midi note number
+        let note = ((oct.0 as isize + 2) * 12)  // octave
+            + (tone as isize)                   // tone
+            + (semi as isize);                  // semitone
+        
+        Self::new(note as u8)
     }
 
-    /// get this note's "ordinal" value, where 0 is A0 and 87 is C8
-    /// not to be confused with `midi` frequency value
-    pub fn ordinal(&self) -> usize
+    /// get the octave of this `Note`
+    ///
+    /// for `Note::octave` and `Note::tone`, ambiguous cases
+    /// are resolved by favouring sharps over flats
+    /// (ie. `C♯` vs `D♭` yields `C♯`) 
+    pub fn octave(&self) -> Octave
     {
-        /// ordinal for a key's octave
-        fn oct(oct: Octave) -> isize
-        {
-            oct.0 as isize * 12
-        }
-        /// ordinal for a whole tone note
-        fn note(note: Note) -> isize
-        {
-            match note
-            {
-                Note::C => -9,
-                Note::D => -7,
-                Note::E => -5,
-                Note::F => -4,
-                Note::G => -2,
-                Note::A => 0,
-                Note::B => 2,
-            }
-        }
-        /// ordinal for a key's accent
-        fn acc(acc: Accent) -> isize
-        {
-            match acc
-            {
-                Accent::Natural => 0,
-                Accent::Sharp => 1,
-                Accent::Flat => -1,
-            }
-        }
-
-        (oct(self.oct) + note(self.note) + acc(self.acc)) as usize
+        Octave((self.0 / 12) - 2)
     }
 
-    /// get this note as a midi number
-    pub fn midi(&self) -> u8
+    /// get the tone and semitone of this `Note`
+    ///
+    /// for `Note::octave` and `Note::tone`, ambiguous cases
+    /// are resolved by favouring sharps over flats
+    /// (ie. `C♯` vs `D♭` yields `C♯`) 
+    pub fn tone(&self) -> (Tone, Semitone)
     {
-        21 + self.ordinal() as u8
+        use Semitone::*;
+        use Tone::*;
+
+        match self.0 % 12
+        {
+            0 => (C, Natural),
+            1 => (C, Sharp),
+            2 => (D, Natural),
+            3 => (D, Sharp),
+            4 => (E, Natural),
+            5 => (F, Natural),
+            6 => (F, Sharp),
+            7 => (G, Natural),
+            8 => (G, Sharp),
+            9 => (A, Natural),
+            10 => (A, Sharp),
+            11 => (B, Natural),
+            _ => unreachable!()
+        }
     }
 }
 
-impl Display for Note
+impl std::ops::Index<Note> for Keyboard
+{
+    type Output = u8;
+
+    fn index(&self, index: Note) -> &Self::Output
+    {
+        &self.keys[(index.0 - Note::MIN.0) as usize]
+    }
+}
+
+impl std::ops::IndexMut<Note> for Keyboard
+{
+    fn index_mut(&mut self, index: Note) -> &mut Self::Output
+    {
+        &mut self.keys[(index.0 - Note::MIN.0) as usize]
+    }
+}
+
+impl std::ops::Index<Pedal> for Keyboard
+{
+    type Output = u8;
+
+    fn index(&self, index: Pedal) -> &Self::Output
+    {
+        &self.pedals[index as usize]
+    }
+}
+
+impl std::ops::IndexMut<Pedal> for Keyboard
+{
+    fn index_mut(&mut self, index: Pedal) -> &mut Self::Output
+    {
+        &mut self.pedals[index as usize]
+    }
+}
+
+impl std::fmt::Display for Tone
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
-        Debug::fmt(&self, f)
+        write!(f, "{:?}", self)
     }
 }
 
-impl Display for Accent
+impl std::fmt::Display for Semitone
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
         match self
         {
-            Accent::Natural => Ok(()),
-            Accent::Sharp => f.write_char('♯'),
-            Accent::Flat => f.write_char('♭'),
+            Self::Natural => Ok(()),
+            Self::Sharp => write!(f, "{}", '♯'),
+            Self::Flat => write!(f, "{}", '♭'),
         }
     }
 }
 
-impl Display for Octave
+impl std::fmt::Display for Octave
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
-        Debug::fmt(&self.0, f)
+        write!(f, "{:?}", self.0)
     }
 }
 
-impl Display for Key
+impl std::fmt::Display for Note
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
-        f.write_fmt(format_args!("{}{}{}", self.note, self.oct, self.acc))
+        let octv = self.octave();
+        let (tone, semi) = self.tone();
+
+        f.write_fmt(format_args!("{}{}{}", tone, octv, semi))
     }
 }
 
-impl TryFrom<char> for Note
+impl std::convert::TryFrom<char> for Tone
 {
     type Error = ();
 
@@ -223,7 +256,7 @@ impl TryFrom<char> for Note
     }
 }
 
-impl TryFrom<char> for Accent
+impl std::convert::TryFrom<char> for Semitone
 {
     type Error = ();
 
@@ -238,64 +271,61 @@ impl TryFrom<char> for Accent
     }
 }
 
-impl TryFrom<char> for Octave
+impl std::convert::TryFrom<char> for Octave
 {
     type Error = ();
 
     fn try_from(value: char) -> Result<Self, Self::Error>
     {
-        Ok(Self(value
-            .to_digit(10)
-            .map(|int| int as u8)
-            .filter(|o| (0..=8).contains(o))
-            .ok_or(())?
-        ))
+        Ok(Self(value.to_digit(10).ok_or(())? as u8))
     }
 }
 
-impl FromStr for Key
+impl std::str::FromStr for Note
 {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err>
     {
+        use std::convert::{ TryFrom, TryInto };
+
         // "C♭3", "C3♭", "C3b", or something along those lines
         let mut iter = s.chars();
 
-        // character at position 0, note
-        let note: Note = iter
+        // character at position 0, tone
+        let tone: Tone = iter
             .next()
             .ok_or(())?
             .try_into()?;
 
-        // character at position 1, accent or octave
+        // character at position 1, semitone or octave
         let one = iter
             .next()
             .ok_or(())?;
-        // character at position 2, accent or octave or none
+        // character at position 2, semitone or octave or none
         let two = iter
             .next();
-        // accent(#, b, natural) and octave(0..=8) order
+        // semitone(#, b, natural) and octave order
         // is arbitrary
-        let (acc, oct): (Option<Accent>, Option<Octave>) =
+        let (semi, octv): (Option<Semitone>, Option<Octave>) =
         (
             one.try_into().ok(),
             one.try_into().ok()
         );
-        // resolve second item in (accent, octave) pair
-        let (acc, oct): (Accent, Octave) = match (acc, oct)
+        // resolve second item in (semitone, octave) pair
+        let (semi, octv): (Semitone, Octave) = match (semi, octv)
         {
             // neither worked
             (None, None) => Err(()),
-            // was accent, third is octave
+            // was semitone, third is octave
             (Some(a), None) => Octave::try_from(two.ok_or(())?).map(|o| (a, o)),
-            // was octave, then has accent?
+            // was octave, then has semitone?
             (None, Some(o)) => match two
             {
-                // parse accent, sharp or flat
-                Some(c) => Accent::try_from(c).map(|a| (a, o)),
-                // no accent, natural
-                None => Ok((Accent::Natural, o)),
+                // parse semitone, sharp or flat
+                Some(c) => Semitone::try_from(c).map(|a| (a, o)),
+                // no semitone, natural
+                None => Ok((Semitone::Natural, o)),
             },
             // bruh
             (Some(_), Some(_)) => unreachable!("how??"),
@@ -307,21 +337,14 @@ impl FromStr for Key
         }
 
         // valid note on 88-key keyboard?
-        if Self::valid(oct, note, acc)
-        {
-            Ok(Self::new(oct, note, acc))
-        }
-        else
-        {
-            Err(())
-        }
+        Self::new2(octv, tone, semi).ok_or(())
     }
 }
 
 #[cfg(test)]
 mod tests
 {
-    use super::Key;
+    use super::Note;
 
     #[test]
     fn parse()
@@ -341,7 +364,7 @@ mod tests
 
         for string in &input
         {
-            let key = string.parse::<Key>();
+            let key = string.parse::<Note>();
 
             println!("\nParsed \"{}\", got: {:?}", string, key);
             if let Ok(key) = key

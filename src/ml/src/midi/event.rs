@@ -135,9 +135,16 @@ impl FromReader for Event
                         }
                     }
                 }
-                // sys-ex event
+                // sys-ex events
                 else
                 {
+                    // length of the event's data
+                    let len = reader.decode::<VarInt>()?;
+
+                    // don't care about this event, but still need to consume its
+                    // data
+                    reader.seek(std::io::SeekFrom::Current(*len as _))?;
+
                     EventKind::Unsupported
                 }
             },
