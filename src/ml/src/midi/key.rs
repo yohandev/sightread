@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 /// represents the state for an 88-key keyboard, on/off
 /// with velocity
 #[derive(Debug, Clone, PartialEq)]
@@ -99,12 +101,13 @@ impl Note
     pub fn new(midi: u8) -> Option<Self>
     {
         if midi >= Self::MIN.0
-        || midi <= Self::MAX.0
+        && midi <= Self::MAX.0
         {
             Some(Self(midi))
         }
         else
         {
+            println!("out of bound: {}", midi);
             None
         }
     }
@@ -114,7 +117,7 @@ impl Note
     pub fn new2(oct: Octave, tone: Tone, semi: Semitone) -> Option<Self>
     {
         // make this a midi note number
-        let note = ((oct.0 as isize + 2) * 12)  // octave
+        let note = ((oct.0 as isize + 1) * 12)  // octave
             + (tone as isize)                   // tone
             + (semi as isize);                  // semitone
         
@@ -128,7 +131,7 @@ impl Note
     /// (ie. `C♯` vs `D♭` yields `C♯`) 
     pub fn octave(&self) -> Octave
     {
-        Octave((self.0 / 12) - 2)
+        Octave((self.0 / 12) - 1)
     }
 
     /// get the tone and semitone of this `Note`
@@ -193,6 +196,64 @@ impl std::ops::IndexMut<Pedal> for Keyboard
     fn index_mut(&mut self, index: Pedal) -> &mut Self::Output
     {
         &mut self.pedals[index as usize]
+    }
+}
+
+impl std::fmt::Display for Keyboard
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        use Semitone::*;
+        use Tone::*;
+
+        // top row
+        f.write_char('\n')?;
+        f.write_char('│')?;
+        for note in Note::MIN.0..=Note::MAX.0
+        {
+            // unchecked `Note` construction is safe because of range
+            let note = Note(note);
+
+            // press colour
+            f.write_str(if self[note] > 0 { "\x1b[0;36m" } else { "\x1b[0m" })?;
+
+            match note.tone()
+            {
+                // white keys
+                (tone, Natural) if matches!(tone, C | F) =>
+                {
+                    f.write_char('│')?
+                }
+                // black keys
+                (tone, Sharp) if !matches!(tone, E | B) =>
+                {
+                    f.write_char('▌')?
+                }
+                (_, _) =>  { }
+            }
+        }
+        // bottom row
+        f.write_char('\n')?;
+        for note in Note::MIN.0..=Note::MAX.0
+        {
+            // unchecked `Note` construction is safe because of range
+            let note = Note(note);
+
+            // press colour
+            f.write_str(if self[note] > 0 { "\x1b[0;36m" } else { "\x1b[0m" })?;
+
+            match note.tone()
+            {
+                // white keys
+                (_, Natural) =>
+                {
+                    f.write_char('└')?
+                }
+                // no black keys
+                _ => { }
+            }
+        }
+        Ok(())
     }
 }
 

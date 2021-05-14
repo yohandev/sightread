@@ -1,43 +1,46 @@
+use std::io::{ Read, Seek };
+use std::time::Duration;
+
 use super::util::*;
+use super::key::*;
 
-/// a MIDI [EventKind] + its delta time compared to the last event.
-/// a delta time of 0 indicates this event and the last are played simultaenously
-///
-/// [EventKind]: EventKind
-pub struct Event
-{
-    /// the inner MIDI event
-    pub kind: EventKind,
-    /// delta time of the event, in MIDI ticks
-    pub dt: VarInt,
-}
+/// a subset of events as specified by the MIDI specification,
+/// designed for `.midi` files in the `maestro` dataset and not
+/// much more. includes the delta time between this event and the
+/// last, a value of 0 indicating the two events happen simultaneously.
+pub struct Event(pub Duration, pub EventKind);
 
-/// MIDI events kind
-///
-/// only includes events this specific implementation cares about, ie. anything `.midi` files
-/// within the `maestro` dataset might contain, and nothing more
+/// a subset of events as specified by the MIDI specification,
+/// designed for `.midi` files in the `maestro` dataset and not
+/// much more
 pub enum EventKind
 {
-    /// a note was toggled off
-    KeyReleased { note: u8 },
-    /// a note was toggled on
-    KeyPressed { note: u8, vel: u8 },
-    /// change in pressure applied to the damper pedal(sustain)
-    DamperPedal { val: u8 },
-    /// change in pressure applied to the soft pedal
-    SoftPedal { val: u8 },
-    /// indicates a change in tempo
-    Tempo { bpm: f32 },
-    /// signifies the end of the current track
+    /// represents some change to a key, giving the key affected
+    /// and its press velocity or 0 if released
+    Key(Note, u8),
+    /// represents some change to a pedal, giving the pedal affected
+    /// and its new press value
+    Pedal(Pedal, u8),
+}
+
+/// `Event` + a few needed by `Midi`
+pub(super) enum MidiEvent
+{
+    /// keyboard event to be passed to the top level iterator
+    /// gives the processed event kind, and delta time in ticks
+    Keyboard(EventKind, VarInt),
+    /// change in tempo -> microseconds per quarter note
+    Tempo(u32),
+    /// this event marks the end of the current track
     EndOfTrack,
-    /// a (maybe) valid MIDI event that the parser simply isn't
-    /// designed to handle; its data is dropped
+    /// possibly a valid MIDI event, but simply unsupported by this
+    /// implementation
     Unsupported,
 }
 
-impl FromReader for Event
+impl FromReader for MidiEvent
 {
-    fn read<R: std::io::Read + std::io::Seek>(reader: &mut R) -> std::io::Result<Self>
+    fn read<R: Read + Seek>(reader: &mut R) -> std::io::Result<Self>
     {
         // delta time of the event, in ticks
         let dt = reader.decode::<VarInt>()?;
@@ -53,7 +56,7 @@ impl FromReader for Event
         //
         // this discards the channel information of channel events, which this
         // implementation doesn't care about
-        let kind = match ty & 0xF0
+        Ok(match ty & 0xF0
         {
             // note off: note number, velocity
             0x80 =>
@@ -61,7 +64,16 @@ impl FromReader for Event
                 let note = reader.decode::<u8>()?;
                 let _vel = reader.decode::<u8>()?;
 
-                EventKind::KeyReleased { note }
+                // valid note on 88-key keyboard
+                if let Some(note) = Note::new(note)
+                {
+                    MidiEvent::Keyboard(EventKind::Key(note, 0), dt)
+                }
+                // out of bounds
+                else
+                {
+                    MidiEvent::Unsupported
+                }
             },
             // note on: note number, velocity
             0x90 =>
@@ -69,7 +81,16 @@ impl FromReader for Event
                 let note = reader.decode::<u8>()?;
                 let vel = reader.decode::<u8>()?;
 
-                EventKind::KeyPressed { note, vel }
+                // valid note on 88-key keyboard
+                if let Some(note) = Note::new(note)
+                {
+                    MidiEvent::Keyboard(EventKind::Key(note, vel.max(1)), dt)
+                }
+                // out of bounds
+                else
+                {
+                    MidiEvent::Unsupported
+                }
             },
             // controller value: num, val
             0xB0 =>
@@ -80,24 +101,32 @@ impl FromReader for Event
                 match num
                 {
                     // sustain pedal
-                    0x40 => EventKind::DamperPedal { val },
+                    0x40 => MidiEvent::Keyboard(EventKind::Pedal(Pedal::Damper, val), dt),
                     // soft pedal
-                    0x43 => EventKind::SoftPedal { val },
+                    0x43 => MidiEvent::Keyboard(EventKind::Pedal(Pedal::Soft, val), dt),
                     // other...
-                    _ => EventKind::Unsupported,
+                    _ => MidiEvent::Unsupported,
                 }
             },
-            // note aftertouch, program change, channel aftertouch,
-            // pitch bend
-            0xA0 | 0xC0 | 0xD0 | 0xE0 =>
+            // note aftertouch, pitch bend
+            0xA0 | 0xE0 =>
             {
                 // don't care about these events, but still need to read
                 // them to completion
                 let _arg1 = reader.decode::<u8>()?;
                 let _arg2 = reader.decode::<u8>()?;
 
-                EventKind::Unsupported
+                MidiEvent::Unsupported
             },
+            // program change, channel aftertouch
+            0xC0 | 0xD0 =>
+            {
+                // don't care about these events, but still need to read
+                // them to completion
+                let _arg1 = reader.decode::<u8>()?;
+
+                MidiEvent::Unsupported
+            }
             // meta event | sys-ex event
             0xF0 =>
             {
@@ -112,7 +141,10 @@ impl FromReader for Event
                     match mty
                     {
                         // end of track
-                        0x2F => EventKind::EndOfTrack,
+                        0x2F =>
+                        {
+                            MidiEvent::EndOfTrack
+                        },
                         0x51 =>
                         {
                             assert_eq!(*len, 3);
@@ -122,7 +154,7 @@ impl FromReader for Event
                             // microseconds per quarter note
                             let mspqn = u32::from_be_bytes([0, raw[0], raw[1], raw[2]]);
                             // perform the conversion to BPM
-                            EventKind::Tempo { bpm: 60000000.0 / mspqn as f32 }
+                            MidiEvent::Tempo(mspqn)
                         },
                         // any other event, which we don't care about but still
                         // need to read to completion
@@ -131,7 +163,7 @@ impl FromReader for Event
                             // consume data
                             reader.seek(std::io::SeekFrom::Current(*len as _))?;
 
-                            EventKind::Unsupported
+                            MidiEvent::Unsupported
                         }
                     }
                 }
@@ -145,13 +177,26 @@ impl FromReader for Event
                     // data
                     reader.seek(std::io::SeekFrom::Current(*len as _))?;
 
-                    EventKind::Unsupported
+                    MidiEvent::Unsupported
                 }
             },
             // ???
-            _ => EventKind::Unsupported,
-        };
+            _ => MidiEvent::Unsupported,
+        })
+    }
+}
 
-        Ok(Self { kind, dt })
+impl Event
+{
+    /// apply this state to the given keyboard and return the delta time of
+    /// this event
+    pub fn apply(self, keyboard: &mut Keyboard) -> std::time::Duration
+    {
+        match self.1
+        {
+            EventKind::Key(note, vel) => keyboard[note] = vel,
+            EventKind::Pedal(pedal, val) => keyboard[pedal] = val,
+        }
+        self.0
     }
 }
