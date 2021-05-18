@@ -1,4 +1,4 @@
-use std::io::{ Read, Seek, Result };
+use std::io::{ Read, Seek, Result, SeekFrom };
 
 /// extension traits for types that are both `Read` and `Seek`,
 /// namely `stdlib`'s `BufReader`
@@ -6,17 +6,33 @@ pub trait Stream: Read + Seek
 {
     /// attempt to retrieve the given type from this stream
     #[inline]
-    fn parse<T: FromStream>(&mut self) -> Result<T> where Self: Sized
+    fn parse<T: FromStream>(&mut self) -> Result<T::Out> where Self: Sized
     {
         T::parse(self)
+    }
+
+    /// attenmpt to peek the given type from this stream without
+    /// reading it
+    fn peek<T: FromStream>(&mut self) -> Result<T::Out> where Self: Sized
+    {
+        let pos = self.stream_position()? as i64;
+        let out = self.parse::<T>();
+        let now = self.stream_position()? as i64;
+
+        self.seek(SeekFrom::Current(pos - now))?;
+
+        out
     }
 }
 
 /// types that can be constructed from a `Stream` of bytes
-pub trait FromStream<Out = Self>: Sized
+pub trait FromStream: Sized
 {    
+    // output read, usually `Self`
+    type Out;
+
     /// attempt to construct `Self` from a stream of bytes
-    fn parse(stream: &mut impl Stream) -> Result<Out>;
+    fn parse(stream: &mut impl Stream) -> Result<Self::Out>;
 }
 
 // blanket implementation
@@ -32,7 +48,9 @@ macro_rules! impl_from_bytes
         $(
         impl FromStream for $typ
         {
-            fn parse(stream: &mut impl Stream) -> Result<Self>
+            type Out = Self;
+
+            fn parse(stream: &mut impl Stream) -> Result<Self::Out>
             {
                 // create byte buffer of appropriate size
                 let mut buf = [0u8; std::mem::size_of::<Self>()];
@@ -51,7 +69,9 @@ impl_from_bytes!(i32, i16, u8);
 // typically used with `[u8; 4]` to compare against chunk tags
 impl<const N: usize> FromStream for [u8; N]
 {
-    fn parse(stream: &mut impl Stream) -> Result<Self>
+    type Out = Self;
+
+    fn parse(stream: &mut impl Stream) -> Result<Self::Out>
     {
         // create empty buffer
         let mut buf = [0u8; N];
@@ -65,9 +85,11 @@ impl<const N: usize> FromStream for [u8; N]
 /// a MIDI variable length integer
 pub struct VarInt;
 
-impl FromStream<i32> for VarInt
+impl FromStream for VarInt
 {
-    fn parse(stream: &mut impl Stream) -> Result<i32>
+    type Out = i32;
+
+    fn parse(stream: &mut impl Stream) -> Result<Self::Out>
     {
         // accumulator for variable size integer
         let mut res = 0i32;
