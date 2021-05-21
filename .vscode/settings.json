@@ -2,6 +2,5 @@
     "rust-analyzer.linkedProjects": [
         "src/rs/Cargo.toml",
         "src/ml/Cargo.toml",
-        "src/ml/midi/Cargo.toml",
     ]
 }
