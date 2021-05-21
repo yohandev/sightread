@@ -8,6 +8,7 @@ resolver = "2"
 [dependencies]
 wee_alloc = "0.4.5"
 microfft = "0.4.0"
+midi = { path = "../ml/midi" }
 
 [lib]
 crate-type = ["cdylib"]

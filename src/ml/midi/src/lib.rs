@@ -4,7 +4,7 @@ pub use key::{ Keyboard, Note, Octave, Tone, Semitone, Pedal };
 pub use event::{ Event, EventKind };
 pub use error::{ Error, Result };
 
-use io::{ Stream, VarInt };
+use io::{ BigEndian, Stream, VarInt };
 
 mod error;
 mod event;
@@ -28,7 +28,7 @@ pub struct MidiFile<S>
     stream: S,
 }
 
-impl<S: Stream> MidiFile<S>
+impl<S: Stream<BigEndian>> MidiFile<S>
 {
     pub fn new(mut stream: S) -> Result<Self>
     {

@@ -2,18 +2,20 @@ use std::io::{ Read, Seek, Result, SeekFrom };
 
 /// extension traits for types that are both `Read` and `Seek`,
 /// namely `stdlib`'s `BufReader`
-pub trait Stream: Read + Seek
+///
+/// takes the generic parameter `E` as a marker for endianness
+pub trait Stream<E>: Read + Seek
 {
     /// attempt to retrieve the given type from this stream
     #[inline]
-    fn parse<T: FromStream>(&mut self) -> Result<T::Out> where Self: Sized
+    fn parse<T: FromStream<E>>(&mut self) -> Result<T::Out> where Self: Sized
     {
         T::parse(self)
     }
 
     /// attenmpt to peek the given type from this stream without
     /// reading it
-    fn peek<T: FromStream>(&mut self) -> Result<T::Out> where Self: Sized
+    fn peek<T: FromStream<E>>(&mut self) -> Result<T::Out> where Self: Sized
     {
         let pos = self.stream_position()? as i64;
         let out = self.parse::<T>();
@@ -26,17 +28,25 @@ pub trait Stream: Read + Seek
 }
 
 /// types that can be constructed from a `Stream` of bytes
-pub trait FromStream: Sized
+///
+/// takes the generic parameter `E` as a marker for endianness
+pub trait FromStream<E>: Sized
 {    
     // output read, usually `Self`
     type Out;
 
     /// attempt to construct `Self` from a stream of bytes
-    fn parse(stream: &mut impl Stream) -> Result<Self::Out>;
+    fn parse(stream: &mut impl Stream<E>) -> Result<Self::Out>;
 }
 
+/// marker type to indicate `Stream`s as big endian byte ordering
+pub struct BigEndian;
+
+/// marker type to indicate `Stream`s as little endian byte ordering
+pub struct LittleEndian;
+
 // blanket implementation
-impl<R : Read + Seek> Stream for R { }
+impl<R : Read + Seek, E> Stream<E> for R { }
 
 /// macro to implement the `FromBytes` trait, which is basically
 /// the same for all primitive types with the exception of the
@@ -46,11 +56,11 @@ macro_rules! impl_from_bytes
     ($($typ:ty),*) =>
     {
         $(
-        impl FromStream for $typ
+        impl FromStream<BigEndian> for $typ
         {
             type Out = Self;
 
-            fn parse(stream: &mut impl Stream) -> Result<Self::Out>
+            fn parse(stream: &mut impl Stream<BigEndian>) -> Result<Self::Out>
             {
                 // create byte buffer of appropriate size
                 let mut buf = [0u8; std::mem::size_of::<Self>()];
@@ -60,6 +70,20 @@ macro_rules! impl_from_bytes
                 Ok(Self::from_be_bytes(buf))
             }
         }
+        impl FromStream<LittleEndian> for $typ
+        {
+            type Out = Self;
+
+            fn parse(stream: &mut impl Stream<LittleEndian>) -> Result<Self::Out>
+            {
+                // create byte buffer of appropriate size
+                let mut buf = [0u8; std::mem::size_of::<Self>()];
+                // read into buffer
+                stream.read_exact(&mut buf)?;
+                // create `Self` from buffer
+                Ok(Self::from_le_bytes(buf))
+            }
+        }
         )*
     };
 }
@@ -67,11 +91,11 @@ macro_rules! impl_from_bytes
 impl_from_bytes!(i32, i16, u8);
 
 // typically used with `[u8; 4]` to compare against chunk tags
-impl<const N: usize> FromStream for [u8; N]
+impl<E, const N: usize> FromStream<E> for [u8; N]
 {
     type Out = Self;
 
-    fn parse(stream: &mut impl Stream) -> Result<Self::Out>
+    fn parse(stream: &mut impl Stream<E>) -> Result<Self::Out>
     {
         // create empty buffer
         let mut buf = [0u8; N];
@@ -85,11 +109,11 @@ impl<const N: usize> FromStream for [u8; N]
 /// a MIDI variable length integer
 pub struct VarInt;
 
-impl FromStream for VarInt
+impl FromStream<BigEndian> for VarInt
 {
     type Out = i32;
 
-    fn parse(stream: &mut impl Stream) -> Result<Self::Out>
+    fn parse(stream: &mut impl Stream<BigEndian>) -> Result<Self::Out>
     {
         // accumulator for variable size integer
         let mut res = 0i32;
