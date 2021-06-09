@@ -1,6 +1,6 @@
-src/ml/midi/target/
-src/rs/target/
 src/ml/target/
+src/rs/target/
+src/ms/target/
 node_modules/
 dist/
 

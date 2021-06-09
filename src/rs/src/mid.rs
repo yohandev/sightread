@@ -1,5 +1,3 @@
-use midi::MidiFile;
-
 /// opens a `.midi` file, given the start, `ptr`, of its encoded
 /// data and how many bytes it is.
 /// 

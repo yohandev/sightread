@@ -4,9 +4,6 @@ use crate::io::{ LittleEndian, Stream };
 
 mod error;
 
-#[cfg(test)]
-mod test;
-
 pub struct WavFile<S>
 {
     /// number of channels in this file

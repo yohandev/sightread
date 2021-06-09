@@ -1,6 +1,6 @@
 use std::time::Duration;
  
-use super::key::{ Keyboard, Note, Pedal };
+use crate::key::{ Keyboard, Note, Pedal };
 
 /// a subset of events as specified by the MIDI specification,
 /// designed for `.midi` files in the `maestro` dataset and not

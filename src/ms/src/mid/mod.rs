@@ -1,17 +1,13 @@
 use std::time::Duration;
 
-pub use key::{ Keyboard, Note, Octave, Tone, Semitone, Pedal };
 pub use event::{ Event, EventKind };
 pub use error::{ Error, Result };
 
 use crate::io::{ BigEndian, Stream, VarInt };
+use crate::key::{ Note, Pedal };
 
 mod error;
 mod event;
-mod key;
-
-#[cfg(test)]
-mod test;
 
 pub struct MidiFile<S>
 {
